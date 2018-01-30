@@ -1,12 +1,12 @@
+import sys
+sys.path.append('faceswap')
+
 import numpy
 import cv2
 import os
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from foo.faceswap.lib.faces_detect import detect_faces
-from foo.faceswap.plugins.PluginLoader import PluginLoader
-
-import sys
-sys.path.append('/home/goberoi/projects/faceit/foo/faceswap')
+from lib.faces_detect import detect_faces
+from plugins.PluginLoader import PluginLoader
 
 
 class Model:
