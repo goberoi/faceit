@@ -1,0 +1,13 @@
+pathlib==1.0.1
+scandir==1.6
+h5py==2.7.1
+Keras==2.1.2
+scikit-image
+dlib
+face_recognition
+youtube-dl
+
+# Required but installed using other means.
+#
+#opencv-python==3.4.0
+#tensorflow-gpu==1.5.0
