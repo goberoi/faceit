@@ -1,0 +1,8 @@
+*~
+.DS_Store
+*.mp4
+__pycache__
+*.pyc
+models
+pyyolo
+
