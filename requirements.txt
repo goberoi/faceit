@@ -6,6 +6,7 @@ scikit-image
 dlib
 face_recognition
 youtube-dl
+moviepy
 
 # Required but installed using other means.
 #

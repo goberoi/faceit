@@ -4,19 +4,23 @@ FaceIt lets you swap one face for another in a YouTube video.
 
 This code relies on the deepfakes/faceswap library.
 
+## Goals
+
+Goals:
+1. Figure out minimum requirements for decent quality results in terms of: training data, and time needed.
+2. Understand the cost on AWS to generate models and images.
+3. Evaluate whether we can build a viral consumer app on this technology based on cost, feasilibity, and fun.
+
+Approach:
+1. Build a tool to quickly test lots of training sizes and times.
+2. Define a set of experiments, collecting initial data, and kick it off.
+3. Review with vision team to understand what we can improve on the model.
+
 ## Usage
 
 ```
-gaurav_simple = Person(
-  name = 'gaurav_simple'
-  videos = [ 'data/gaurav-short-video.mp4' ],
-  images = [ 'data/gaurav_images_from_fb/' ]
-)
-
 trump_gaurav_simple = Model(
   name = 'trump_gaurav_simple',
-  person_a = 'trump',
-  person_b = 'gaurav',
   media_a = [ 'data/trump_speech.mp4', 'data/trump_photos' ],
   media_b = [ 'data/gaurav-short-video.mp4', 'data/gaurav-fb-photos' ],
 )
@@ -27,6 +31,8 @@ trump_gaurav_simple.train(
   total_time = '240',
   checkpoint_every = '15'
 )
+
+trump_gaurav_simple.convert('gaurav-short-video.mp4')
 ```
 
 ```
@@ -114,6 +120,25 @@ class Video:
 
 
 ## Data Directory Structure
+
+```
+data/media/
+    trump_speech.mp4
+    trump_photos/
+        photo1.jpg
+        photo2.jpg
+    gaurav_short_video.mp4
+    oren_machine_learning_speech.mp4
+
+data/training/
+    trump_speech.mp4/
+        frame0.jpg
+	frame2.jpg
+	...
+
+data/output/
+    
+```
 
 ```
 data/
