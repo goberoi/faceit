@@ -44,12 +44,13 @@ class Model:
         print("Processing video: %s" % self._media_path(filename))
         
         if os.path.exists(self._training_path(filename)):
-            print("Proccessing video already done, found results at: %s" % self._training_path(filename))
+            print("Processing video already done, found results at: %s" % self._training_path(filename))
             return
 
-        output_dir = self._output_path(filename)
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        training_dir = self._training_path(filename)
+        if not os.path.exists(training_dir):
+            os.makedirs(training_dir)
+            
         video = VideoFileClip(self._media_path(filename))
         
         extractor = PluginLoader.get_extractor("Align")()
@@ -57,11 +58,11 @@ class Model:
         for frame in video.iter_frames():
             print("Processing frame: %03d" % frame_num)
             for (face_num, face) in enumerate(detect_faces(frame)):
-                print("Processing face: %03d" % face_num)                
+                print("Processing face: %03d" % face_num)
+                training_file = os.path.join(training_dir, 'frame%03d_face%02d.jpg' % (frame_num, face_num))
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 resized_image = extractor.extract(frame, face, 256)
-                output_file = os.path.join(output_dir, 'frame_%03d_%02d.jpg' % (frame_num, face_num))
-                print(output_file)
-                cv2.imwrite(output_file, resized_image)
+                cv2.imwrite(training_file, resized_image)
             frame_num += 1
 
     def _process_images(self, media):
