@@ -155,3 +155,15 @@ data/
 def fetch_video(url):
     """Download or load video from cache and return filename."""
     return filename
+
+## Notes
+
+Download video command:
+```
+youtube-dl -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio' --merge-output-format mp4 -o "foobar.%(ext)s" https://www.youtube.com/watch?v=f0UB06v7yLY
+```
+
+Output template for using youtube id and extension:
+```
+            'outtmpl': os.path.join(Model.VIDEO_PATH, person + '_%(id)s.%(ext)s'),
+```
