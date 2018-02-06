@@ -10,6 +10,8 @@ import time
 
 from lib.utils import FullHelpArgumentParser
 from scripts.extract import ExtractTrainingData
+from scripts.train import TrainingProcessor
+from scripts.convert import ConvertImage
 
 
 class Model:
@@ -17,6 +19,8 @@ class Model:
     PERSON_PATH = 'data/persons'    
     
     def __init__(self, person_a, person_b):
+        self._faceswap = FaceSwapInterface()
+        
         self._person_a = person_a
         self._person_b = person_b
 
@@ -97,21 +101,28 @@ class Model:
             return
         
         os.makedirs(video_faces_dir)
+        self._faceswap.extract(video_frames_dir, video_faces_dir, self._faces[person])
 
-        parser = FullHelpArgumentParser()
-        subparser = parser.add_subparsers()
+class FaceSwapInterface:
+    def __init__(self):
+        self._parser = FullHelpArgumentParser()
+        subparser = self._parser.add_subparsers()
         extract = ExtractTrainingData(
             subparser, "extract", "Extract the faces from a pictures.")
+        train = TrainingProcessor(
+            subparser, "train", "This command trains the model for the two faces A and B.")
+        convert = ConvertImage(
+            subparser, "convert", "Convert a source image to a new one with the face swapped.")
 
-        args = Namespace(input_dir = video_frames_dir,
-                         output_dir = video_faces_dir,
-                         processes = 1,
-                         filter = self._faces[person],
-                         detector = 'cnn',
-                         verbose = False)
+    def extract(self, input_dir, output_dir, filter_path):
+        args_str = "extract --input-dir {} --output-dir {} --filter {} --processes 1 --detector cnn"
+        args_str = args_str.format(input_dir, output_dir, filter_path)
+        self._run_script(args_str)
+
+    def _run_script(self, args_str):
+        args = self._parser.parse_args(args_str.split(' '))
+        args.func(args)
         
-        extract.process_arguments(args)
-
 model = Model('oren', 'trump')
 
 # Add video data
