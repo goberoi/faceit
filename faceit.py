@@ -4,6 +4,8 @@ sys.path.append('faceswap')
 import os
 from argparse import Namespace
 from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+from moviepy.editor import AudioFileClip
 import youtube_dl
 import cv2
 import time
@@ -155,7 +157,8 @@ class FaceIt:
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path())
 
     def convert(self, video_file, swap_model = False):
-        video = VideoFileClip(self._video_path({ 'name' : video_file }))
+        video_path = self._video_path({ 'name' : video_file })
+        video = VideoFileClip(video_path)
         
         model = PluginLoader.get_model("Original")(self._model_path())
         if not model.load(swap_model):
@@ -171,8 +174,11 @@ class FaceIt:
                               smooth_mask=True,
                               avg_color_adjust=True)
         
-        def _convert_frame(get_frame, t):
+        def _convert_frame_helper(get_frame, t):
             frame = get_frame(t)
+            return _convert_frame(frame)
+
+        def _convert_frame(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
             for face in detect_faces(frame, "cnn"):
                 # TODO: add filter by face. See self.filter.check(face) in cli.py 
@@ -181,9 +187,21 @@ class FaceIt:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV                            
             return frame
 
-        video = video.fl(_convert_frame)
-        video.write_videofile(video_file)
-        del video        
+        # video = video.fl(_convert_frame_helper)
+
+        # Convert frames one by one
+        frames = []
+        for frame in tqdm.tqdm(video.iter_frames()):
+            frames.append(_convert_frame(frame))
+        new_video = ImageSequenceClip(frames, fps = video.fps)
+
+        # Add audio
+        audio = AudioFileClip(video_path)
+        new_video = new_video.set_audio(audio)
+        
+        new_video.write_videofile(video_file)
+        del video
+        del new_video                
 
 class FaceSwapInterface:
     def __init__(self):
