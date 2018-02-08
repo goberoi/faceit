@@ -172,7 +172,7 @@ class FaceIt:
                               mask_type="facehullandrect",
                               erosion_kernel_size=None,
                               smooth_mask=True,
-                              avg_color_adjust=False)
+                              avg_color_adjust=True)
         
         def _convert_frame(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
