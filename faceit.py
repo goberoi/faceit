@@ -167,17 +167,13 @@ class FaceIt:
 
         converter = PluginLoader.get_converter("Masked")
         converter = converter(model.converter(swap_model),
-                              blur_size=2,
-                              seamless_clone=False,
+                              blur_size=8,
+                              seamless_clone=True,
                               mask_type="facehullandrect",
                               erosion_kernel_size=None,
                               smooth_mask=True,
-                              avg_color_adjust=True)
+                              avg_color_adjust=False)
         
-        def _convert_frame_helper(get_frame, t):
-            frame = get_frame(t)
-            return _convert_frame(frame)
-
         def _convert_frame(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
             for face in detect_faces(frame, "cnn"):
@@ -186,8 +182,6 @@ class FaceIt:
                 frame = frame.astype(numpy.float32)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV                            
             return frame
-
-        # video = video.fl(_convert_frame_helper)
 
         # Convert frames one by one
         frames = []
