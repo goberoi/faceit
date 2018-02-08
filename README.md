@@ -19,33 +19,6 @@ Approach:
 ## Usage
 
 ```
-trump_gaurav_simple = Model(
-  name = 'trump_gaurav_simple',
-  media_a = [ 'data/trump_speech.mp4', 'data/trump_photos' ],
-  media_b = [ 'data/gaurav-short-video.mp4', 'data/gaurav-fb-photos' ],
-)
-
-trump_gaurav_simple.prepare_data()
-
-trump_gaurav_simple.train(
-  total_time = '240',
-  checkpoint_every = '15'
-)
-
-trump_gaurav_simple.convert('gaurav-short-video.mp4')
-```
-
-```
-python faceit.py --add_video gaurav1.mp4
-
-python faceit.py --add_video trump https://www.youtube.com/watch?v=f0UB06v7yLY
-python faceit.py --add_video oren https://www.youtube.com/watch?v=V2V0Yiy0Afs
-python faceit.py --train "oren trump 1 hour" oren trump
-python faceit.py --convert trump oren https://www.youtube.com/watch?v=f0UB06v7yLY
-
-python faceit.py --add_video oren https://www.youtube.com/watch?v=ZCsrUI9kGII&t=2659s
-
-python faceit.py --convert trump oren https://www.youtube.com/watch?v=f0UB06v7yLY
 ```
 
 ## UX Ideas
@@ -122,39 +95,69 @@ class Video:
 ## Data Directory Structure
 
 ```
-data/media/
-    trump_speech.mp4
-    trump_photos/
-        photo1.jpg
-        photo2.jpg
-    gaurav_short_video.mp4
-    oren_machine_learning_speech.mp4
+data/persons/trump.jpg
+data/persons/oren.jpg
 
-data/training/
-    trump_speech.mp4/
-        frame0.jpg
-	frame2.jpg
-	...
+data/videos/trump_speech_compilation.mp4
 
-data/output/
-    
+
+data/processed/trump_speech_compilation.mp4_frames/
+data/processed/trump_speech_compilation.mp4_faces/
+data/processed/trump_oren_simple/trump
+data/processed/trump_oren_simple/oren
+
+models/trump_oren_simple/decoder_A.h5
+models/trump_oren_simple/decoder_B.h5
+models/trump_oren_simple/encoder.h5
+
+
+
+convert/foo.mp4
+convert/foo_converted.mp4
 ```
 
 ```
-data/
-    people/
-        videos/
-	    video_0/
-	        url.txt
-		video_0.mp4
-	faces
-    models/
+oren_trump_simple.json
+model = {
+    'name' : 'oren_trump_simple',
+    'person_a' : {
+        'name' : 'trump',
+        'videos' : [
+            ('trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY' ),
+        ]
+    },
+    'person_b' : {
+        'name' : 'oren',
+        'videos' : [
+            ('oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
+        ]
+    }
+}
+
+oren_trump_complex.json
+model = {
+    'name' : 'oren_trump_complex',
+#    'base_model' : None,
+    'base_model' : 'oren_trump_simple',    
+    'person_a' : {
+        'name' : 'trump',
+        'videos' : [
+            ('trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY' ),
+            ('foobar.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY' ),            
+        ]
+    },
+    'person_b' : {
+        'name' : 'oren',
+        'videos' : [
+            ('oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
+        ]
+    }
+}
+
+python faceit.py train oren_trump_simple.json
+python faceit.py convert oren_trump_simple foo.mp4
 ```
 
-
-def fetch_video(url):
-    """Download or load video from cache and return filename."""
-    return filename
 
 ## Notes
 
@@ -167,3 +170,8 @@ Output template for using youtube id and extension:
 ```
             'outtmpl': os.path.join(Model.VIDEO_PATH, person + '_%(id)s.%(ext)s'),
 ```
+
+
+# Some day later
+#model.add_video('oren', 'input/oren/oren.mp4') # Existing video file
+#model.add_images('oren', 'input/oren_images') # Folder of images

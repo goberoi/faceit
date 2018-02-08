@@ -8,7 +8,7 @@ face_recognition
 youtube-dl
 moviepy
 numpy==1.14.0
-
+tqdm
 
 # Required but installed using other means.
 #
