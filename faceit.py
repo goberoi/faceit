@@ -1,24 +1,23 @@
-import sys
-sys.path.append('faceswap')
-
 import os
 from argparse import Namespace
-from moviepy.video.io.VideoFileClip import VideoFileClip
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-from moviepy.editor import AudioFileClip
 import youtube_dl
 import cv2
 import time
 import tqdm
 import numpy
+from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+from moviepy.editor import AudioFileClip
+import sys
+sys.path.append('faceswap')
 
 from lib.utils import FullHelpArgumentParser
 from scripts.extract import ExtractTrainingData
 from scripts.train import TrainingProcessor
 from scripts.convert import ConvertImage
-from plugins.PluginLoader import PluginLoader
-#from plugins.Model_Original import 
 from lib.faces_detect import detect_faces
+from plugins.PluginLoader import PluginLoader
+
 
 class FaceIt:
     VIDEO_PATH = 'data/videos'
@@ -45,19 +44,11 @@ class FaceIt:
         if not os.path.exists(os.path.join(FaceIt.VIDEO_PATH)):
             os.makedirs(FaceIt.VIDEO_PATH)
 
-        # Magic incantation to let tensorflow use more GPU memory
-        import tensorflow as tf
-        from keras.backend.tensorflow_backend import set_session
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        config.gpu_options.visible_device_list="0"
-        set_session(tf.Session(config=config))
-
-        
-    def add_video(self, person, name, url=None):
+    def add_video(self, person, name, url=None, fps=2):
         self._videos[person].append({
             'name' : name,
-            'url' : url
+            'url' : url,
+            'fps' : fps
         })
 
     def fetch(self):
@@ -103,10 +94,10 @@ class FaceIt:
 
     def _extract_frames(self, person, video):
         video_frames_dir = self._video_frames_path(video)
-        video = VideoFileClip(self._video_path(video))
+        video_clip = VideoFileClip(self._video_path(video))
         
         start_time = time.time()
-        print('[extract-frames] about to extract_frames for {}, fps {}, length {}s'.format(video_frames_dir, video.fps, video.duration))
+        print('[extract-frames] about to extract_frames for {}, fps {}, length {}s'.format(video_frames_dir, video_clip.fps, video_clip.duration))
         
         if os.path.exists(video_frames_dir):
             print('[extract-frames] frames already exist, skipping extraction: {}'.format(video_frames_dir))
@@ -114,7 +105,7 @@ class FaceIt:
         
         os.makedirs(video_frames_dir)
         frame_num = 0
-        for frame in tqdm.tqdm(video.iter_frames(fps=2)):
+        for frame in tqdm.tqdm(video_clip.iter_frames(fps=video['fps'])):
             video_frame_file = os.path.join(video_frames_dir, 'frame_{:03d}.jpg'.format(frame_num))
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
             cv2.imwrite(video_frame_file, frame)
@@ -138,7 +129,8 @@ class FaceIt:
 
     
     def _symlink_faces_for_model(self, person, video):
-        os.makedirs(self._model_person_data_path(person))
+        if not os.path.exists(self._model_person_data_path(person)):
+            os.makedirs(self._model_person_data_path(person))
         for face_file in os.listdir(self._video_faces_path(video)):
             target_file = os.path.join(self._model_person_data_path(person), video['name'] + "_" + face_file)
             face_file_path = os.path.join(os.getcwd(), self._video_faces_path(video), face_file)
@@ -183,6 +175,14 @@ class FaceIt:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV                            
             return frame
 
+        # Magic incantation to let tensorflow use more GPU memory
+        import tensorflow as tf
+        import keras.backend.tensorflow_backend as K
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        config.gpu_options.visible_device_list="0"
+        K.set_session(tf.Session(config=config))
+
         # Convert frames one by one
         frames = []
         for frame in tqdm.tqdm(video.iter_frames()):
@@ -222,19 +222,27 @@ class FaceSwapInterface:
         args = self._parser.parse_args(args_str.split(' '))
         args.func(args)
         
-faceit = FaceIt('trump_to_oren', 'trump', 'oren')
 
-# Add video data
-faceit.add_video('trump', 'trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY')
-faceit.add_video('oren', 'oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
+
+
+faceit = FaceIt('pikotaro_to_jacob', 'pikotaro', 'jacob')
+faceit.add_video('pikotaro', 'pikotaro_music_video.mp4', 'https://www.youtube.com/watch?v=Ct6BUPvE2sM', fps=20)
+faceit.add_video('jacob', 'jacob_rolex.mp4', 'https://www.youtube.com/watch?v=HPcbjLJXelU')
+faceit.add_video('jacob', 'jacob_wall.mp4', 'https://www.youtube.com/watch?v=91LULLWBRqk')
+faceit.add_video('jacob', 'jacob_pitch.mp4', 'https://www.youtube.com/watch?v=smRCM5Smwls')
+faceit.add_video('jacob', 'jacob_interview.mp4', 'https://www.youtube.com/watch?v=Y-mYHCO9lF8')
+
+#faceit = FaceIt('trump_to_oren', 'trump', 'oren')
+#faceit.add_video('trump', 'trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY')
+#faceit.add_video('oren', 'oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
 
 # When getting ready to train
-#faceit.fetch()
-#faceit.extract_frames()
-#faceit.extract_faces()
+faceit.fetch()
+faceit.extract_frames()
+faceit.extract_faces()
 
 # Interactive for now
-#faceit.train()
+faceit.train()
 
 
-faceit.convert('trump.mp4')
+#faceit.convert('pikotaro_music_video.mp4')
