@@ -44,6 +44,15 @@ class FaceIt:
         if not os.path.exists(os.path.join(FaceIt.VIDEO_PATH)):
             os.makedirs(FaceIt.VIDEO_PATH)
 
+        # Magic incantation to let tensorflow use more GPU memory
+        if False:
+            import tensorflow as tf
+            import keras.backend.tensorflow_backend as K
+            config = tf.ConfigProto()
+            config.gpu_options.allow_growth = True
+            config.gpu_options.visible_device_list="0"
+            K.set_session(tf.Session(config=config))
+
     def add_video(self, person, name, url=None, fps=2):
         self._videos[person].append({
             'name' : name,
@@ -165,6 +174,9 @@ class FaceIt:
                               erosion_kernel_size=None,
                               smooth_mask=True,
                               avg_color_adjust=True)
+
+        def _convert_helper(get_frame, t):
+            return _convert_frame(get_frame(t))
         
         def _convert_frame(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
@@ -175,23 +187,16 @@ class FaceIt:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV                            
             return frame
 
-        # Magic incantation to let tensorflow use more GPU memory
-        import tensorflow as tf
-        import keras.backend.tensorflow_backend as K
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        config.gpu_options.visible_device_list="0"
-        K.set_session(tf.Session(config=config))
-
         # Convert frames one by one
-        frames = []
-        for frame in tqdm.tqdm(video.iter_frames()):
-            frames.append(_convert_frame(frame))
-        new_video = ImageSequenceClip(frames, fps = video.fps)
+        #frames = []
+        #for frame in tqdm.tqdm(video.iter_frames(), total = video.fps * video.duration, desc = '[converting video] {}'.format(video_file)):
+        #    frames.append(_convert_frame(frame))
+        #new_video = ImageSequenceClip(frames, fps = video.fps)
+        new_video = video.fl(_convert_helper)
 
         # Add audio
-        audio = AudioFileClip(video_path)
-        new_video = new_video.set_audio(audio)
+#        audio = AudioFileClip(video_path)
+#        new_video = new_video.set_audio(audio)
         
         new_video.write_videofile(video_file)
         del video
@@ -215,7 +220,7 @@ class FaceSwapInterface:
 
     def train(self, input_a_dir, input_b_dir, model_dir):
         args_str = "train --input-A {} --input-B {} --model-dir {} --batch-size {} --write-image"
-        args_str = args_str.format(input_a_dir, input_b_dir, model_dir, 128)
+        args_str = args_str.format(input_a_dir, input_b_dir, model_dir, 256)
         self._run_script(args_str)
 
     def _run_script(self, args_str):
@@ -225,12 +230,22 @@ class FaceSwapInterface:
 
 
 
-faceit = FaceIt('pikotaro_to_jacob', 'pikotaro', 'jacob')
-faceit.add_video('pikotaro', 'pikotaro_music_video.mp4', 'https://www.youtube.com/watch?v=Ct6BUPvE2sM', fps=20)
+#faceit = FaceIt('pikotaro_to_jacob', 'pikotaro', 'jacob')
+#faceit.add_video('pikotaro', 'pikotaro_music_video.mp4', 'https://www.youtube.com/watch?v=Ct6BUPvE2sM', fps=20)
+#faceit.add_video('jacob', 'jacob_rolex.mp4', 'https://www.youtube.com/watch?v=HPcbjLJXelU')
+#faceit.add_video('jacob', 'jacob_wall.mp4', 'https://www.youtube.com/watch?v=91LULLWBRqk')
+#faceit.add_video('jacob', 'jacob_pitch.mp4', 'https://www.youtube.com/watch?v=smRCM5Smwls')
+#faceit.add_video('jacob', 'jacob_interview.mp4', 'https://www.youtube.com/watch?v=Y-mYHCO9lF8')
+
+#faceit = FaceIt('pikotaro_to_jacob', 'pikotaro', 'jacob')
+
+faceit = FaceIt('rick_to_jacob', 'rick', 'jacob')
+faceit.add_video('rick', 'rick_never_gonna_give_you_up.mp4', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
 faceit.add_video('jacob', 'jacob_rolex.mp4', 'https://www.youtube.com/watch?v=HPcbjLJXelU')
 faceit.add_video('jacob', 'jacob_wall.mp4', 'https://www.youtube.com/watch?v=91LULLWBRqk')
 faceit.add_video('jacob', 'jacob_pitch.mp4', 'https://www.youtube.com/watch?v=smRCM5Smwls')
 faceit.add_video('jacob', 'jacob_interview.mp4', 'https://www.youtube.com/watch?v=Y-mYHCO9lF8')
+
 
 #faceit = FaceIt('trump_to_oren', 'trump', 'oren')
 #faceit.add_video('trump', 'trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY')
