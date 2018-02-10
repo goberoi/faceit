@@ -9,6 +9,7 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 from moviepy.editor import AudioFileClip
 import shutil
+from pathlib import Path
 import sys
 sys.path.append('faceswap')
 
@@ -149,8 +150,6 @@ class FaceIt:
             os.symlink(face_file_path, target_file)
 
     def train(self):
-        print(self._videos)
-        
         # Setup directory structure for model, and create one director for person_a faces, and
         # another for person_b faces containing symlinks to all faces.
         if not os.path.exists(self._model_path()):
@@ -169,10 +168,12 @@ class FaceIt:
         video_path = self._video_path({ 'name' : video_file })
         video = VideoFileClip(video_path)
         
-        model = PluginLoader.get_model("Original")(self._model_path())
+        model = PluginLoader.get_model("Original")(Path(self._model_path()))
+
         if not model.load(swap_model):
             print('model Not Found! A valid model must be provided to continue!')
             exit(1)
+
 
         converter = PluginLoader.get_converter("Masked")
         converter = converter(model.converter(False),
@@ -200,16 +201,8 @@ class FaceIt:
             frames_converted += 1            
             return frame
 
-        # Convert frames one by one
-        #frames = []
-        #for frame in tqdm.tqdm(video.iter_frames(), total = video.fps * video.duration, desc = '[converting video] {}'.format(video_file)):
-        #    frames.append(_convert_frame(frame))
-        #new_video = ImageSequenceClip(frames, fps = video.fps)
+        # Convert frames 
         new_video = video.fl(_convert_helper)
-
-        # Add audio
-#        audio = AudioFileClip(video_path)
-#        new_video = new_video.set_audio(audio)
         
         new_video.write_videofile(video_file, rewrite_audio = True)
         del video
@@ -279,8 +272,8 @@ faceit.add_video('jacob', 'jacob_interview.mp4', 'https://www.youtube.com/watch?
 
 #faceit.convert('bezos_ice_bucket.mp4', max_frames = 300)
 
-faceit.convert('jacob_wall.mp4', max_frames = 300, swap_model = True)
+#faceit.convert('jacob_wall.mp4', max_frames = 300, swap_model = True)
 
-#faceit.convert('rick_never_gonna_give_you_up.mp4')
+faceit.convert('rick_never_gonna_give_you_up.mp4', swap_model = True, max_frames = 600)
 
 #faceit.convert('pikotaro_music_video.mp4')
