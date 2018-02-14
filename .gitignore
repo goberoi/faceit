@@ -7,4 +7,4 @@ models
 pyyolo
 env
 data
-
+_*.jpg
