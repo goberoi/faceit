@@ -8,7 +8,7 @@ import tqdm
 import numpy
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-from moviepy.editor import AudioFileClip
+from moviepy.editor import AudioFileClip, clips_array
 import shutil
 from pathlib import Path
 import sys
@@ -189,7 +189,7 @@ class FaceIt:
 
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path(use_gan), use_gan)
 
-    def convert(self, video_file, swap_model = False, max_frames = None, use_gan = False):
+    def convert(self, video_file, swap_model = False, duration = None, use_gan = False):
         # Magic incantation to not have tensorflow blow up with an out of memory error.
         import tensorflow as tf
         import keras.backend.tensorflow_backend as K
@@ -197,21 +197,23 @@ class FaceIt:
         config.gpu_options.allow_growth = True
         config.gpu_options.visible_device_list="0"
         K.set_session(tf.Session(config=config))
-        
+
+        # Load video
         video_path = self._video_path({ 'name' : video_file })
         video = VideoFileClip(video_path)
 
+        # Load model
         model_name = "Original"
         converter_name = "Masked"
         if use_gan:
             model_name = "GAN"
             converter_name = "GAN"
         model = PluginLoader.get_model(model_name)(Path(self._model_path(use_gan)))
-
         if not model.load(swap_model):
             print('model Not Found! A valid model must be provided to continue!')
             exit(1)
 
+        # Load converter
         converter = PluginLoader.get_converter(converter_name)
         converter = converter(model.converter(False),
                               blur_size=8,
@@ -221,35 +223,41 @@ class FaceIt:
                               smooth_mask=True,
                               avg_color_adjust=True)
 
+        # Load face filter
         filter_person = self._person_a
         if swap_model:
             filter_person = self._person_b
         filter = FaceFilter(self._people[filter_person]['faces'])
 
-        def _convert_helper(get_frame, t):
-            return _convert_frame(get_frame(t))
-
-        frames_converted = 0
+        # Define conversion method per frame
         def _convert_frame(frame):
-            nonlocal frames_converted
-            if max_frames and frames_converted > max_frames:
-                return frame
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
             for face in detect_faces(frame, "cnn"):
                 if True: 
                     frame = converter.patch_image(frame, face)
                     frame = frame.astype(numpy.float32)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
-            frames_converted += 1            
             return frame
+        def _convert_helper(get_frame, t):
+            return _convert_frame(get_frame(t))
 
-        # Convert frames 
+        # If a duration is set, trim clip
+        video = video.subclip(0, duration)
+
+        # Kick off convert frames for each frame
         new_video = video.fl(_convert_helper)
 
+        # Stack clips side by side
+        final_video = clips_array([[video, new_video]])
+
+        # Write video
         output_path = os.path.join(self.OUTPUT_PATH, video_file)
-        new_video.write_videofile(output_path, rewrite_audio = True)
+        final_video.write_videofile(output_path, rewrite_audio = True)
+
+        # Clean up
         del video
-        del new_video                
+        del new_video
+        del final_video
 
 class FaceSwapInterface:
     def __init__(self):
@@ -332,7 +340,7 @@ if __name__ == '__main__':
     parser.add_argument('task', choices = ['preprocess', 'train', 'convert'])
     parser.add_argument('model', choices = FaceIt.MODELS.keys())
     parser.add_argument('video', nargs = '?')
-    parser.add_argument('--max-frames', type=int)
+    parser.add_argument('--duration', type=int)
     parser.add_argument('--swap-model', action = 'store_true')
     args = parser.parse_args()
 
@@ -347,4 +355,4 @@ if __name__ == '__main__':
         if not args.video:
             print('Need a video to convert. Some ideas: {}'.format(", ".join([video['name'] for video in faceit.all_videos()])))
         else:
-            faceit.convert(args.video, max_frames = args.max_frames, swap_model = args.swap_model)
+            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model)
