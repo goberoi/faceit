@@ -26,6 +26,7 @@ class FaceIt:
     VIDEO_PATH = 'data/videos'
     PERSON_PATH = 'data/persons'
     PROCESSED_PATH = 'data/processed'
+    OUTPUT_PATH = 'data/output'
     MODEL_PATH = 'models'
     MODELS = {}
 
@@ -39,6 +40,7 @@ class FaceIt:
                 'name' : person,
                 'videos' : [],
                 'faces' : os.path.join(FaceIt.PERSON_PATH, person + '.jpg'),
+                'photos' : []
             }
         
         self._name = name
@@ -55,6 +57,9 @@ class FaceIt:
         if not os.path.exists(os.path.join(FaceIt.VIDEO_PATH)):
             os.makedirs(FaceIt.VIDEO_PATH)            
 
+    def add_photos(self, person, photo_dir):
+        self._people[person]['photos'].append(photo_dir)
+            
     def add_video(self, person, name, url=None, fps=20):
         self._people[person]['videos'].append({
             'name' : name,
@@ -70,6 +75,20 @@ class FaceIt:
 
     def extract_faces(self):        
         self._process_videos(self._extract_faces)
+
+        
+    def _extract_faces_from_photos(self, person, photo_dir):
+        photo_faces_dir = self._video_faces_path({ 'name' : photo_dir })
+
+        start_time = time.time()
+        print('[extract-faces] about to extract faces for {}'.format(photo_faces_dir))
+        
+        if os.path.exists(photo_faces_dir):
+            print('[extract-faces] faces already exist, skipping face extraction: {}'.format(photo_faces_dir))
+            return
+        
+        os.makedirs(photo_faces_dir)
+        self._faceswap.extract(self._video_path(photo_dir), photo_faces_dir, self._people[person]['faces'])
 
     def all_videos(self):
         return self._people[self._person_a]['videos'] + self._people[self._person_b]['videos']
@@ -171,7 +190,7 @@ class FaceIt:
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path(use_gan), use_gan)
 
     def convert(self, video_file, swap_model = False, max_frames = None, use_gan = False):
-        # Magic incantation to let tensorflow use more GPU memory
+        # Magic incantation to not have tensorflow blow up with an out of memory error.
         import tensorflow as tf
         import keras.backend.tensorflow_backend as K
         config = tf.ConfigProto()
@@ -192,7 +211,6 @@ class FaceIt:
         if not model.load(swap_model):
             print('model Not Found! A valid model must be provided to continue!')
             exit(1)
-
 
         converter = PluginLoader.get_converter(converter_name)
         converter = converter(model.converter(False),
@@ -218,7 +236,7 @@ class FaceIt:
                 return frame
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
             for face in detect_faces(frame, "cnn"):
-                if filter.check(face):
+                if True: 
                     frame = converter.patch_image(frame, face)
                     frame = frame.astype(numpy.float32)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
@@ -227,8 +245,9 @@ class FaceIt:
 
         # Convert frames 
         new_video = video.fl(_convert_helper)
-        
-        new_video.write_videofile(video_file, rewrite_audio = True)
+
+        output_path = os.path.join(self.OUTPUT_PATH, video_file)
+        new_video.write_videofile(output_path, rewrite_audio = True)
         del video
         del new_video                
 
@@ -284,18 +303,45 @@ if __name__ == '__main__':
     faceit.add_video('oren', 'oren_future_of_data_mining.mp4', 'https://www.youtube.com/watch?v=ZCsrUI9kGII', fps=5)
     FaceIt.add_model(faceit)
 
+    faceit = FaceIt('fallon_to_people', 'fallon', 'people')
+    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
+    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
+    FaceIt.add_model(faceit)
+
+    faceit = FaceIt('fallon_to_rick', 'fallon', 'rick')
+    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
+    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
+    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
+    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
+    faceit.add_video('rick', 'rick_never_gonna_give_you_up.mp4', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+    FaceIt.add_model(faceit)
+
+    faceit = FaceIt('fallon_to_oliver', 'fallon', 'oliver')
+    faceit.add_video('oliver', 'oliver_trumpcard.mp4', 'https://www.youtube.com/watch?v=JlxQ3IUWT0I')
+    faceit.add_video('oliver', 'oliver_taxreform.mp4', 'https://www.youtube.com/watch?v=g23w7WPSaU8')
+    faceit.add_video('oliver', 'oliver_zazu.mp4', 'https://www.youtube.com/watch?v=Y0IUPwXSQqg')
+    faceit.add_video('oliver', 'oliver_pastor.mp4', 'https://www.youtube.com/watch?v=mUndxpbufkg')
+    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
+    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
+    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
+    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
+    FaceIt.add_model(faceit)    
+
+    
     parser = argparse.ArgumentParser()
-    parser.add_argument('task', choices = ['train', 'convert'])
+    parser.add_argument('task', choices = ['preprocess', 'train', 'convert'])
     parser.add_argument('model', choices = FaceIt.MODELS.keys())
     parser.add_argument('video', nargs = '?')
-    parser.add_argument('--max-frames')
+    parser.add_argument('--max-frames', type=int)
     parser.add_argument('--swap-model', action = 'store_true')
     args = parser.parse_args()
 
     faceit = FaceIt.MODELS[args.model]
 
-    if args.task == 'train':
+    
+    if args.task == 'preprocess':
         faceit.preprocess()
+    elif args.task == 'train':
         faceit.train()
     elif args.task == 'convert':
         if not args.video:
