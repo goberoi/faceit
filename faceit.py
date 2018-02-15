@@ -68,34 +68,21 @@ class FaceIt:
         })
 
     def fetch(self):
-        self._process_videos(self._fetch_video)
+        self._process_media(self._fetch_video)
 
     def extract_frames(self):
-        self._process_videos(self._extract_frames)
+        self._process_media(self._extract_frames)
 
     def extract_faces(self):        
-        self._process_videos(self._extract_faces)
-
-        
-    def _extract_faces_from_photos(self, person, photo_dir):
-        photo_faces_dir = self._video_faces_path({ 'name' : photo_dir })
-
-        start_time = time.time()
-        print('[extract-faces] about to extract faces for {}'.format(photo_faces_dir))
-        
-        if os.path.exists(photo_faces_dir):
-            print('[extract-faces] faces already exist, skipping face extraction: {}'.format(photo_faces_dir))
-            return
-        
-        os.makedirs(photo_faces_dir)
-        self._faceswap.extract(self._video_path(photo_dir), photo_faces_dir, self._people[person]['faces'])
+        self._process_media(self._extract_faces)
+        self._process_media(self._extract_faces_from_photos, 'photos')        
 
     def all_videos(self):
         return self._people[self._person_a]['videos'] + self._people[self._person_b]['videos']
 
-    def _process_videos(self, func):
+    def _process_media(self, func, media_type = 'videos'):
         for person in self._people:
-            for video in self._people[person]['videos']:
+            for video in self._people[person][media_type]:
                 func(person, video)
 
     def _video_path(self, video):
@@ -163,6 +150,20 @@ class FaceIt:
         os.makedirs(video_faces_dir)
         self._faceswap.extract(self._video_frames_path(video), video_faces_dir, self._people[person]['faces'])
 
+    def _extract_faces_from_photos(self, person, photo_dir):
+        photo_faces_dir = self._video_faces_path({ 'name' : photo_dir })
+
+        start_time = time.time()
+        print('[extract-faces] about to extract faces for {}'.format(photo_faces_dir))
+        
+        if os.path.exists(photo_faces_dir):
+            print('[extract-faces] faces already exist, skipping face extraction: {}'.format(photo_faces_dir))
+            return
+        
+        os.makedirs(photo_faces_dir)
+        self._faceswap.extract(self._video_path(photo_dir), photo_faces_dir, self._people[person]['faces'])
+
+
     def preprocess(self):
         self.fetch()
         self.extract_frames()
@@ -185,11 +186,11 @@ class FaceIt:
 
         for person in self._people:
             os.makedirs(self._model_person_data_path(person))
-        self._process_videos(self._symlink_faces_for_model)
+        self._process_media(self._symlink_faces_for_model)
 
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path(use_gan), use_gan)
 
-    def convert(self, video_file, swap_model = False, duration = None, start_time = None, use_gan = False, face_filter = False):
+    def convert(self, video_file, swap_model = False, duration = None, start_time = None, use_gan = False, face_filter = False, photos = True):
         # Magic incantation to not have tensorflow blow up with an out of memory error.
         import tensorflow as tf
         import keras.backend.tensorflow_backend as K
@@ -197,10 +198,6 @@ class FaceIt:
         config.gpu_options.allow_growth = True
         config.gpu_options.visible_device_list="0"
         K.set_session(tf.Session(config=config))
-
-        # Load video
-        video_path = self._video_path({ 'name' : video_file })
-        video = VideoFileClip(video_path)
 
         # Load model
         model_name = "Original"
@@ -230,39 +227,52 @@ class FaceIt:
         filter = FaceFilter(self._people[filter_person]['faces'])
 
         # Define conversion method per frame
-        def _convert_frame(frame):
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
+        def _convert_frame(frame, convert_colors = True):
+            if convert_colors:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
             for face in detect_faces(frame, "cnn"):
-                if face_filter and filter.check(face):
+                if (not face_filter) or (face_filter and filter.check(face)):
                     frame = converter.patch_image(frame, face)
                     frame = frame.astype(numpy.float32)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
+            if convert_colors:                    
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
             return frame
         def _convert_helper(get_frame, t):
             return _convert_frame(get_frame(t))
 
-        # If a duration is set, trim clip
-        video = video.subclip(start_time, duration)
+        media_path = self._video_path({ 'name' : video_file })
+        if not photos:
+            # Load video
+            video = VideoFileClip(media_path)
 
-        # Resize clip to be smaller
-        video = video.resize(width=480)
+            # If a duration is set, trim clip
+            video = video.subclip(start_time, duration)
+            
+            # Resize clip to be smaller
+            video = video.resize(width=480)
+        
+            # Kick off convert frames for each frame
+            new_video = video.fl(_convert_helper)
 
-        # Kick off convert frames for each frame
-        new_video = video.fl(_convert_helper)
+            # Stack clips side by side
+            final_video = clips_array([[video, new_video]])
 
-        # Stack clips side by side
-        final_video = clips_array([[video, new_video]])
+            #        final_video = final_video.resize(width = (480 * 2))
 
-#        final_video = final_video.resize(width = (480 * 2))
-
-        # Write video
-        output_path = os.path.join(self.OUTPUT_PATH, video_file)
-        final_video.write_videofile(output_path, rewrite_audio = True)
-
-        # Clean up
-        del video
-        del new_video
-        del final_video
+            # Write video
+            output_path = os.path.join(self.OUTPUT_PATH, video_file)
+            final_video.write_videofile(output_path, rewrite_audio = True)
+            
+            # Clean up
+            del video
+            del new_video
+            del final_video
+        else:
+            for face_file in os.listdir(media_path):
+                face_path = os.path.join(media_path, face_file)
+                image = cv2.imread(face_path)
+                image = _convert_frame(image, convert_colors = False)
+                cv2.imwrite(os.path.join(self.OUTPUT_PATH, face_file), image)
 
 class FaceSwapInterface:
     def __init__(self):
@@ -347,9 +357,10 @@ if __name__ == '__main__':
     parser.add_argument('task', choices = ['preprocess', 'train', 'convert'])
     parser.add_argument('model', choices = FaceIt.MODELS.keys())
     parser.add_argument('video', nargs = '?')
-    parser.add_argument('--duration', type = int)
-    parser.add_argument('--swap-model', action = 'store_true')
-    parser.add_argument('--face-filter', action = 'store_true')
+    parser.add_argument('--duration', type = int, default = None)
+    parser.add_argument('--photos', action = 'store_true', default = True)    
+    parser.add_argument('--swap-model', action = 'store_true', default = False)
+    parser.add_argument('--face-filter', action = 'store_true', default = False)
     parser.add_argument('--start-time', type = int, default = 0)
     args = parser.parse_args()
 
@@ -364,4 +375,4 @@ if __name__ == '__main__':
         if not args.video:
             print('Need a video to convert. Some ideas: {}'.format(", ".join([video['name'] for video in faceit.all_videos()])))
         else:
-            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model, face_filter = args.face_filter, start_time = args.start_time)
+            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model, face_filter = args.face_filter, start_time = args.start_time, photos = args.photos)
