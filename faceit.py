@@ -189,7 +189,7 @@ class FaceIt:
 
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path(use_gan), use_gan)
 
-    def convert(self, video_file, swap_model = False, duration = None, use_gan = False):
+    def convert(self, video_file, swap_model = False, duration = None, start_time = None, use_gan = False, face_filter = False):
         # Magic incantation to not have tensorflow blow up with an out of memory error.
         import tensorflow as tf
         import keras.backend.tensorflow_backend as K
@@ -233,7 +233,7 @@ class FaceIt:
         def _convert_frame(frame):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
             for face in detect_faces(frame, "cnn"):
-                if True: 
+                if face_filter and filter.check(face):
                     frame = converter.patch_image(frame, face)
                     frame = frame.astype(numpy.float32)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
@@ -242,13 +242,18 @@ class FaceIt:
             return _convert_frame(get_frame(t))
 
         # If a duration is set, trim clip
-        video = video.subclip(0, duration)
+        video = video.subclip(start_time, duration)
+
+        # Resize clip to be smaller
+        video = video.resize(width=480)
 
         # Kick off convert frames for each frame
         new_video = video.fl(_convert_helper)
 
         # Stack clips side by side
         final_video = clips_array([[video, new_video]])
+
+#        final_video = final_video.resize(width = (480 * 2))
 
         # Write video
         output_path = os.path.join(self.OUTPUT_PATH, video_file)
@@ -333,6 +338,8 @@ if __name__ == '__main__':
     faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
     faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
     faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
+    faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
+    faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
     FaceIt.add_model(faceit)    
 
     
@@ -340,8 +347,10 @@ if __name__ == '__main__':
     parser.add_argument('task', choices = ['preprocess', 'train', 'convert'])
     parser.add_argument('model', choices = FaceIt.MODELS.keys())
     parser.add_argument('video', nargs = '?')
-    parser.add_argument('--duration', type=int)
+    parser.add_argument('--duration', type = int)
     parser.add_argument('--swap-model', action = 'store_true')
+    parser.add_argument('--face-filter', action = 'store_true')
+    parser.add_argument('--start-time', type = int, default = 0)
     args = parser.parse_args()
 
     faceit = FaceIt.MODELS[args.model]
@@ -355,4 +364,4 @@ if __name__ == '__main__':
         if not args.video:
             print('Need a video to convert. Some ideas: {}'.format(", ".join([video['name'] for video in faceit.all_videos()])))
         else:
-            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model)
+            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model, face_filter = args.face_filter, start_time = args.start_time)
