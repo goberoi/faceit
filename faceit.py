@@ -8,7 +8,8 @@ import tqdm
 import numpy
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-from moviepy.editor import AudioFileClip, clips_array
+from moviepy.video.fx.all import crop
+from moviepy.editor import AudioFileClip, clips_array, TextClip, CompositeVideoClip
 import shutil
 from pathlib import Path
 import sys
@@ -161,7 +162,7 @@ class FaceIt:
             return
         
         os.makedirs(photo_faces_dir)
-        self._faceswap.extract(self._video_path(photo_dir), photo_faces_dir, self._people[person]['faces'])
+        self._faceswap.extract(self._video_path({ 'name' : photo_dir }), photo_faces_dir, self._people[person]['faces'])
 
 
     def preprocess(self):
@@ -170,6 +171,8 @@ class FaceIt:
         self.extract_faces()
     
     def _symlink_faces_for_model(self, person, video):
+        if isinstance(video, str):
+            video = { 'name' : video }
         for face_file in os.listdir(self._video_faces_path(video)):
             target_file = os.path.join(self._model_person_data_path(person), video['name'] + "_" + face_file)
             face_file_path = os.path.join(os.getcwd(), self._video_faces_path(video), face_file)
@@ -187,10 +190,11 @@ class FaceIt:
         for person in self._people:
             os.makedirs(self._model_person_data_path(person))
         self._process_media(self._symlink_faces_for_model)
+#        self._process_media(self._symlink_faces_for_model, media_type = 'photos')        
 
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path(use_gan), use_gan)
 
-    def convert(self, video_file, swap_model = False, duration = None, start_time = None, use_gan = False, face_filter = False, photos = True):
+    def convert(self, video_file, swap_model = False, duration = None, start_time = None, use_gan = False, face_filter = False, photos = True, crop_x = None, width = None, side_by_side = False):
         # Magic incantation to not have tensorflow blow up with an out of memory error.
         import tensorflow as tf
         import keras.backend.tensorflow_backend as K
@@ -229,7 +233,7 @@ class FaceIt:
         # Define conversion method per frame
         def _convert_frame(frame, convert_colors = True):
             if convert_colors:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV            
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) # Swap RGB to BGR to work with OpenCV
             for face in detect_faces(frame, "cnn"):
                 if (not face_filter) or (face_filter and filter.check(face)):
                     frame = converter.patch_image(frame, face)
@@ -242,22 +246,40 @@ class FaceIt:
 
         media_path = self._video_path({ 'name' : video_file })
         if not photos:
-            # Load video
+            # Process video; start loading the video clip
             video = VideoFileClip(media_path)
 
             # If a duration is set, trim clip
-            video = video.subclip(start_time, duration)
+            if duration:
+                video = video.subclip(start_time, start_time + duration)
             
-            # Resize clip to be smaller
-            video = video.resize(width=480)
-        
+            # Resize clip before processing
+            if width:
+                video = video.resize(width = width)
+
+            # Crop clip if desired
+            if crop_x:
+                video = video.fx(crop, x2 = video.w / 2)
+
             # Kick off convert frames for each frame
             new_video = video.fl(_convert_helper)
 
             # Stack clips side by side
-            final_video = clips_array([[video, new_video]])
+            if side_by_side:
+                def add_caption(caption, clip):
+                    text = (TextClip(caption, font='Amiri-regular', color='white', fontsize=80).
+                            margin(40).
+                            set_duration(clip.duration).
+                            on_color(color=(0,0,0), col_opacity=0.6))
+                    return CompositeVideoClip([clip, text])
+                video = add_caption("Original", video)
+                new_video = add_caption("Swapped", new_video)                
+                final_video = clips_array([[video], [new_video]])
+            else:
+                final_video = new_video
 
-            #        final_video = final_video.resize(width = (480 * 2))
+            # Resize clip after processing
+            #final_video = final_video.resize(width = (480 * 2))
 
             # Write video
             output_path = os.path.join(self.OUTPUT_PATH, video_file)
@@ -268,6 +290,7 @@ class FaceIt:
             del new_video
             del final_video
         else:
+            # Process a directory of photos
             for face_file in os.listdir(media_path):
                 face_path = os.path.join(media_path, face_file)
                 image = cv2.imread(face_path)
@@ -282,7 +305,7 @@ class FaceSwapInterface:
     def extract(self, input_dir, output_dir, filter_path):
         extract = ExtractTrainingData(
             self._subparser, "extract", "Extract the faces from a pictures.")
-        args_str = "extract --input-dir {} --output-dir {} --filter {} --processes 1 --detector cnn"
+        args_str = "extract --input-dir {} --output-dir {} --processes 1 --detector cnn --filter {}"
         args_str = args_str.format(input_dir, output_dir, filter_path)
         self._run_script(args_str)
 
@@ -329,6 +352,11 @@ if __name__ == '__main__':
     faceit = FaceIt('fallon_to_people', 'fallon', 'people')
     faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
     faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
+    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
+    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
+    faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
+    faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
+#    faceit.add_photos('people', 'mens_apparel')
     FaceIt.add_model(faceit)
 
     faceit = FaceIt('fallon_to_rick', 'fallon', 'rick')
@@ -344,24 +372,45 @@ if __name__ == '__main__':
     faceit.add_video('oliver', 'oliver_taxreform.mp4', 'https://www.youtube.com/watch?v=g23w7WPSaU8')
     faceit.add_video('oliver', 'oliver_zazu.mp4', 'https://www.youtube.com/watch?v=Y0IUPwXSQqg')
     faceit.add_video('oliver', 'oliver_pastor.mp4', 'https://www.youtube.com/watch?v=mUndxpbufkg')
+    faceit.add_video('oliver', 'oliver_cookie.mp4', 'https://www.youtube.com/watch?v=H916EVndP_A')
+    faceit.add_video('oliver', 'oliver_lorelai.mp4', 'https://www.youtube.com/watch?v=G1xP2f1_1Jg')
     faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
     faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
     faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
     faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
     faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
     faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
-    FaceIt.add_model(faceit)    
+    faceit.add_video('fallon', 'fallon_xfinity.mp4', 'https://www.youtube.com/watch?v=7JwBBZRLgkM')
+    faceit.add_video('fallon', 'fallon_bank.mp4', 'https://www.youtube.com/watch?v=q-0hmYHWVgE')
+    FaceIt.add_model(faceit)
 
+#    faceit.add_video('fallon', 'fallon_tightpantsjlo.mp4', 'https://www.youtube.com/watch?v=MLUvOtqTmYM')
+
+    
+    faceit = FaceIt('fallon_to_hader', 'fallon', 'hader')
+    faceit.add_video('hader', 'hader_superbowl.mp4', 'https://www.youtube.com/watch?v=pNTEjlNX0AQ')
+    faceit.add_video('hader', 'hader_kimmel.mp4', 'https://www.youtube.com/watch?v=q46wIG6hFik')
+    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
+    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
+    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
+    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
+    faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
+    faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
+    faceit.add_video('fallon', 'fallon_xfinity.mp4', 'https://www.youtube.com/watch?v=7JwBBZRLgkM')
+    FaceIt.add_model(faceit)
     
     parser = argparse.ArgumentParser()
     parser.add_argument('task', choices = ['preprocess', 'train', 'convert'])
     parser.add_argument('model', choices = FaceIt.MODELS.keys())
     parser.add_argument('video', nargs = '?')
     parser.add_argument('--duration', type = int, default = None)
-    parser.add_argument('--photos', action = 'store_true', default = True)    
+    parser.add_argument('--photos', action = 'store_true', default = False)    
     parser.add_argument('--swap-model', action = 'store_true', default = False)
     parser.add_argument('--face-filter', action = 'store_true', default = False)
     parser.add_argument('--start-time', type = int, default = 0)
+    parser.add_argument('--crop-x', type = int, default = None)
+    parser.add_argument('--width', type = int, default = None)
+    parser.add_argument('--side-by-side', action = 'store_true', default = False)    
     args = parser.parse_args()
 
     faceit = FaceIt.MODELS[args.model]
@@ -375,4 +424,6 @@ if __name__ == '__main__':
         if not args.video:
             print('Need a video to convert. Some ideas: {}'.format(", ".join([video['name'] for video in faceit.all_videos()])))
         else:
-            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model, face_filter = args.face_filter, start_time = args.start_time, photos = args.photos)
+            faceit.convert(args.video, duration = args.duration, swap_model = args.swap_model, face_filter = args.face_filter, start_time = args.start_time, photos = args.photos, crop_x = args.crop_x, width = args.width, side_by_side = args.side_by_side)
+
+
