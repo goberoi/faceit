@@ -190,7 +190,6 @@ class FaceIt:
         for person in self._people:
             os.makedirs(self._model_person_data_path(person))
         self._process_media(self._symlink_faces_for_model)
-#        self._process_media(self._symlink_faces_for_model, media_type = 'photos')        
 
         self._faceswap.train(self._model_person_data_path(self._person_a), self._model_person_data_path(self._person_b), self._model_path(use_gan), use_gan)
 
@@ -325,48 +324,6 @@ class FaceSwapInterface:
 
 
 if __name__ == '__main__':
-    
-    faceit = FaceIt('rick_to_jacob', 'rick', 'jacob')
-    faceit.add_video('rick', 'rick_never_gonna_give_you_up.mp4', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 20)
-    faceit.add_video('jacob', 'jacob_rolex.mp4', 'https://www.youtube.com/watch?v=HPcbjLJXelU')
-    faceit.add_video('jacob', 'jacob_wall.mp4', 'https://www.youtube.com/watch?v=91LULLWBRqk')
-    faceit.add_video('jacob', 'jacob_pitch.mp4', 'https://www.youtube.com/watch?v=smRCM5Smwls')
-    faceit.add_video('jacob', 'jacob_interview.mp4', 'https://www.youtube.com/watch?v=Y-mYHCO9lF8')
-    FaceIt.add_model(faceit)
-    
-    faceit = FaceIt('bezos_to_jacob', 'bezos', 'jacob')
-    faceit.add_video('bezos', 'bezos_alexa_lost_her_voice.mp4', 'https://www.youtube.com/watch?v=YLPNjaAOrBw')
-    faceit.add_video('bezos', 'bezos_ice_bucket.mp4', 'https://www.youtube.com/watch?v=DFVezzjAhFY', fps=5)
-    faceit.add_video('jacob', 'jacob_rolex.mp4', 'https://www.youtube.com/watch?v=HPcbjLJXelU')
-    faceit.add_video('jacob', 'jacob_wall.mp4', 'https://www.youtube.com/watch?v=91LULLWBRqk')
-    faceit.add_video('jacob', 'jacob_pitch.mp4', 'https://www.youtube.com/watch?v=smRCM5Smwls')
-    faceit.add_video('jacob', 'jacob_interview.mp4', 'https://www.youtube.com/watch?v=Y-mYHCO9lF8')
-    FaceIt.add_model(faceit)
-    
-    faceit = FaceIt('trump_to_oren', 'trump', 'oren')
-    faceit.add_video('trump', 'trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY')
-    faceit.add_video('oren', 'oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
-    faceit.add_video('oren', 'oren_future_of_data_mining.mp4', 'https://www.youtube.com/watch?v=ZCsrUI9kGII', fps=5)
-    FaceIt.add_model(faceit)
-
-    faceit = FaceIt('fallon_to_people', 'fallon', 'people')
-    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
-    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
-    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
-    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
-    faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
-    faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
-#    faceit.add_photos('people', 'mens_apparel')
-    FaceIt.add_model(faceit)
-
-    faceit = FaceIt('fallon_to_rick', 'fallon', 'rick')
-    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
-    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
-    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
-    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
-    faceit.add_video('rick', 'rick_never_gonna_give_you_up.mp4', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
-    FaceIt.add_model(faceit)
-
     faceit = FaceIt('fallon_to_oliver', 'fallon', 'oliver')
     faceit.add_video('oliver', 'oliver_trumpcard.mp4', 'https://www.youtube.com/watch?v=JlxQ3IUWT0I')
     faceit.add_video('oliver', 'oliver_taxreform.mp4', 'https://www.youtube.com/watch?v=g23w7WPSaU8')
@@ -384,21 +341,6 @@ if __name__ == '__main__':
     faceit.add_video('fallon', 'fallon_bank.mp4', 'https://www.youtube.com/watch?v=q-0hmYHWVgE')
     FaceIt.add_model(faceit)
 
-#    faceit.add_video('fallon', 'fallon_tightpantsjlo.mp4', 'https://www.youtube.com/watch?v=MLUvOtqTmYM')
-
-    
-    faceit = FaceIt('fallon_to_hader', 'fallon', 'hader')
-    faceit.add_video('hader', 'hader_superbowl.mp4', 'https://www.youtube.com/watch?v=pNTEjlNX0AQ')
-    faceit.add_video('hader', 'hader_kimmel.mp4', 'https://www.youtube.com/watch?v=q46wIG6hFik')
-    faceit.add_video('fallon', 'fallon_mom.mp4', 'https://www.youtube.com/watch?v=gjXrm2Q-te4')
-    faceit.add_video('fallon', 'fallon_charlottesville.mp4', 'https://www.youtube.com/watch?v=E9TJsw67OmE')
-    faceit.add_video('fallon', 'fallon_dakota.mp4', 'https://www.youtube.com/watch?v=tPtMP_NAMz0')
-    faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
-    faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
-    faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
-    faceit.add_video('fallon', 'fallon_xfinity.mp4', 'https://www.youtube.com/watch?v=7JwBBZRLgkM')
-    FaceIt.add_model(faceit)
-    
     parser = argparse.ArgumentParser()
     parser.add_argument('task', choices = ['preprocess', 'train', 'convert'])
     parser.add_argument('model', choices = FaceIt.MODELS.keys())
@@ -414,7 +356,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     faceit = FaceIt.MODELS[args.model]
-
     
     if args.task == 'preprocess':
         faceit.preprocess()
