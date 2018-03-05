@@ -1,6 +1,6 @@
 # FaceIt
 
-<div style="width:100%;height:0;padding-bottom:113%;position:relative;"><iframe src="https://giphy.com/embed/fo23NLu9hCqAZYi4Eh" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div>
+<img src="http://gph.is/2HRv1Be">
 
 A script to make it easy to swap faces in videos using the deepfakes/faceswap library, and urls of YouTube videos for training data.
 
@@ -58,7 +58,7 @@ Note that you can get useful usage information just by running: `python faceit.p
 
 ## License
 
-This script is shared under this license, but the library it depends on currently has no license. Beware!
+*This script is shared under the MIT license, but the library it depends on currently has no license. Beware!*
 
 Copyright 2018 Gaurav Oberoi (goberoi@gmail.com)
 
@@ -67,6 +67,3 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
-
