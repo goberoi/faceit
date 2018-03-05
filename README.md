@@ -1,8 +1,6 @@
 # FaceIt
 
-<p align="center">
-<img align="center" src="https://media.giphy.com/media/fo23NLu9hCqAZYi4Eh/giphy.gif"  alt="Jimmy Fallon's body with John Olivery's head, oh my!"/>
-</p>
+![Jimmy Fallon's body with John Olivery's head, oh my.](https://media.giphy.com/media/fo23NLu9hCqAZYi4Eh/giphy.gif)
 
 A script to make it easy to swap faces in videos using the deepfakes/faceswap library, and urls of YouTube videos for training data.
 
