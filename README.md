@@ -1,177 +1,72 @@
-## FaceIt
+# FaceIt
 
-FaceIt lets you swap one face for another in a YouTube video.
+<div style="width:100%;height:0;padding-bottom:113%;position:relative;"><iframe src="https://giphy.com/embed/fo23NLu9hCqAZYi4Eh" width="100%" height="100%" style="position:absolute" frameBorder="0" class="giphy-embed" allowFullScreen></iframe></div>
 
-This code relies on the deepfakes/faceswap library.
+A script to make it easy to swap faces in videos using the deepfakes/faceswap library, and urls of YouTube videos for training data.
 
-## Goals
+## Overview
 
-Goals:
-1. Figure out minimum requirements for decent quality results in terms of: training data, and time needed.
-2. Understand the cost on AWS to generate models and images.
-3. Evaluate whether we can build a viral consumer app on this technology based on cost, feasilibity, and fun.
+I wrote this script to help me explore the capabilities and limitations of the video face swapping technology known as [Deepfakes](github.com/deepfakes/faceswap). Read all about it in this detailed blog post.
 
-Approach:
-1. Build a tool to quickly test lots of training sizes and times.
-2. Define a set of experiments, collecting initial data, and kick it off.
-3. Review with vision team to understand what we can improve on the model.
+What does this script do? It makes it trivially easy to acquire and preprocess training data from YouTube. This greatly simplifies the work required to setup a new model, since often all you need to do is find 3-4 videos of each person to get decent results.
+
+## Installation
+
+There is a requirements.txt file in the repo, but to make it all work, you'll need CUDA libraries installed, and ideally Dlib compiled with CUDA support.
 
 ## Usage
 
-```
-```
+Setup your model and training data in code, e.g.:
+```python
+# Create the model with params: model name, person A name, person B name.
+faceit = FaceIt('fallon_to_oliver', 'fallon', 'oliver')
 
-## UX Ideas
+# Add any number of videos for person A by specifying the YouTube url of the video.
+faceit.add_video('fallon', 'fallon_emmastone.mp4', 'https://www.youtube.com/watch?v=bLBSoC_2IY8')
+faceit.add_video('fallon', 'fallon_single.mp4', 'https://www.youtube.com/watch?v=xfFVuXN0FSI')
+faceit.add_video('fallon', 'fallon_sesamestreet.mp4', 'https://www.youtube.com/watch?v=SHogg7pJI_M')
 
-Home:
-
-* People [add person]
-  * Oren [add video] [add image] [add facebook] [add instagram]
-  * Trump
-  * Gaurav
-  * Harrison Ford
-
-* Models [add model]
-  * Oren-Trump 1 hour, 1 video each [convert video] [convert photo] [train more]
-  * Oren-Trump 2 hours, 1 video each
-  * Oren-Trump 3 hours, 1 video each
-  * Oren --> Harrison Ford
-  * Trump --> Oren
-  * Harrison Ford --> Oren
-
-## Database Schema
-
-Person
-* id
-* name
-* facebook_username
-* instagram_username
-
-Media
-* id
-* person_id
-* url
-* name
-* type (image, video)
-
-Model
-* id
-* name
-* person_a_id
-* person_b_id
-* url
-* last_accuracy
-* training_time
-* trained_on (list of media)
-
-## Notes
-
-add_video
-* download
-* extract each frame
-* find face in each frame
-* filter each face
-* save frame file
-
-
-* Model
-  * person_a
-  * person_b
-
-* Person
-  * name
-  * videos
-  * models
-
-class Video:
-  * url
-  * filename
-  * frames_dir
-  * extracted_faces_dir
-  * filtered_extracted
-  * __init__(url)
-
-
-## Data Directory Structure
-
-```
-data/persons/trump.jpg
-data/persons/oren.jpg
-
-data/videos/trump_speech_compilation.mp4
-
-
-data/processed/trump_speech_compilation.mp4_frames/
-data/processed/trump_speech_compilation.mp4_faces/
-data/processed/trump_oren_simple/trump
-data/processed/trump_oren_simple/oren
-
-models/trump_oren_simple/decoder_A.h5
-models/trump_oren_simple/decoder_B.h5
-models/trump_oren_simple/encoder.h5
-
-
-
-convert/foo.mp4
-convert/foo_converted.mp4
+# Do the same for person B.
+faceit.add_video('oliver', 'oliver_trumpcard.mp4', 'https://www.youtube.com/watch?v=JlxQ3IUWT0I')
+faceit.add_video('oliver', 'oliver_taxreform.mp4', 'https://www.youtube.com/watch?v=g23w7WPSaU8')
+faceit.add_video('oliver', 'oliver_zazu.mp4', 'https://www.youtube.com/watch?v=Y0IUPwXSQqg')
 ```
 
+Then create the directory `./data/persons` and put one image containing the face of person A and another of person B. Use the same name that you did when setting up the model. This file is used to filter their face from any others in the videos you provide. E.g.:
 ```
-oren_trump_simple.json
-model = {
-    'name' : 'oren_trump_simple',
-    'person_a' : {
-        'name' : 'trump',
-        'videos' : [
-            ('trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY' ),
-        ]
-    },
-    'person_b' : {
-        'name' : 'oren',
-        'videos' : [
-            ('oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
-        ]
-    }
-}
-
-oren_trump_complex.json
-model = {
-    'name' : 'oren_trump_complex',
-#    'base_model' : None,
-    'base_model' : 'oren_trump_simple',    
-    'person_a' : {
-        'name' : 'trump',
-        'videos' : [
-            ('trump_speech_compilation.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY' ),
-            ('foobar.mp4', 'https://www.youtube.com/watch?v=f0UB06v7yLY' ),            
-        ]
-    },
-    'person_b' : {
-        'name' : 'oren',
-        'videos' : [
-            ('oren_speech_stevens_institute.mp4', 'https://www.youtube.com/watch?v=V2V0Yiy0Afs')
-        ]
-    }
-}
-
-python faceit.py train oren_trump_simple.json
-python faceit.py convert oren_trump_simple foo.mp4
+./data/persons/fallon.jpg
+./data/persons/oliver.jpg
 ```
 
-
-## Notes
-
-Download video command:
+Then, preprocess the data. This downloads the videos, breaks them into frames, and extracts the relevant faces, e.g.:
 ```
-youtube-dl -f 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio' --merge-output-format mp4 -o "foobar.%(ext)s" https://www.youtube.com/watch?v=f0UB06v7yLY
+python faceit.py preprocess fallon_to_oliver
 ```
 
-Output template for using youtube id and extension:
+Then train the model, e.g.:
 ```
-            'outtmpl': os.path.join(Model.VIDEO_PATH, person + '_%(id)s.%(ext)s'),
+python faceit.py train fallon_to_oliver
 ```
 
+Finally, convert any video that is stored on disk, e.g.:
+```
+python faceit.py convert fallon_to_oliver fallon_emmastone.mp4 --start 40 --duration 55 --side-by-side
+```
 
-# Some day later
-#model.add_video('oren', 'input/oren/oren.mp4') # Existing video file
-#model.add_images('oren', 'input/oren_images') # Folder of images
+Note that you can get useful usage information just by running: `python faceit.py -h`
+
+
+## License
+
+This script is shared under this license, but the library it depends on currently has no license. Beware!
+
+Copyright 2018 Gaurav Oberoi (goberoi@gmail.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+
