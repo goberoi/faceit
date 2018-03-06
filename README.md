@@ -2,13 +2,13 @@
 
 ![Jimmy Fallon's body with John Olivery's head, oh my.](example.jpg)
 
-A script to make it easy to swap faces in videos using the [deepfakes/faceswap](https://github.com/deepfakes/faceswap) library, and urls of YouTube videos for training data.
+A script to make it easy to swap faces in videos using the [deepfakes/faceswap](https://github.com/deepfakes/faceswap) library, and urls of YouTube videos for training data. The image above shows a face swap from Jimmy Fallon (host of The Tonight Show) to John Oliver (host of Last Week Tonight).
 
 ## Overview
 
 I wrote this script to help me explore the capabilities and limitations of the video face swapping technology known as [Deepfakes](https://github.com/deepfakes/faceswap).
 
-**[Read all about it in this detailed blog post.](http://www.example.com)**
+**[Read all about it in this detailed blog post.](https://goberoi.com/exploring-deepfakes-20c9947c22d9)**
 
 What does this script do? It makes it trivially easy to acquire and preprocess training data from YouTube. This greatly simplifies the work required to setup a new model, since often all you need to do is find 3-4 videos of each person to get decent results.
 
